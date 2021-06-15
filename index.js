@@ -1,1 +1,1 @@
-module.exports = require('./dist/react-interactive-tutorials.ts');
+module.exports = require('./dist/react-interactive-tutorials.js');
