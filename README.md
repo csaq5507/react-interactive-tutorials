@@ -55,7 +55,7 @@ Register your own tutorials:
 import { registerTutorials } from 'react-interactive-tutorials'
 registerTutorials(YOUR_TUTORIALS);
 
-// attached to global var
+// attached to global let
 interactiveTutorials.registerTutorials(YOUR_TUTORIALS);
 ```
 

@@ -1,27 +1,27 @@
-var path = require('path');
-var NodeExternals = require('webpack-node-externals');
+let path = require('path');
+let NodeExternals = require('webpack-node-externals');
 
 module.exports = {
-  entry: './src/init.jsx',
+  context: __dirname, // to automatically find tsconfig.json
+  entry: './src/init',
   output: {
     path: __dirname + '/dist',
-    filename: 'react-interactive-tutorials.js',
-    library: 'interactive-tutorials',
-    libraryTarget: 'umd',
+    filename: 'react-interactive-tutorials.ts',
+    library: 'interactive_tutorials',
+  },
+  resolve: {
+    extensions: [".ts", ".tsx", ".js", ".css"],
   },
   module: {
-    loaders: [
+    rules: [
       {
-        test: /\.jsx?$/,
+        test: /\.tsx?$/,
         exclude: /node_modules/,
-        loader: 'babel-loader',
-        query: {
-          presets: [
-            'react',
-            'es2015',
-            'stage-0',
-          ],
-        },
+        loader: 'ts-loader',
+        options: {
+          // disable type checker - we will use it in fork plugin
+          transpileOnly: true
+        }
       },
     ],
   },

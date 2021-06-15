@@ -1,40 +1,41 @@
-import * as React from "react";
-import ReactDom from 'react-dom';
+// @ts-ignore
+import React from 'react';
+import ReactDOM from 'react-dom';
 import JQuery from 'jquery';
 import Clone from 'clone';
-
-
 import {paragraphs, ovverideTransFunction} from "./utils";
 import Tutorial from "./Tutorial";
+import {TutorialType} from "./types";
 
-var TUTORIAL_CLASS = null;
-var REGISTER_DELAY = null;
-var TUTORIALS = {};
-var OPTIONS = {};
+let TUTORIAL_CLASS: Tutorial | null = null;
+let REGISTER_DELAY: null | number = null;
+let TUTORIALS = {};
+let OPTIONS = {};
 
 function init_dom(callback) {
     if (TUTORIAL_CLASS !== null) {
-        callback();
+        callback(TUTORIAL_CLASS);
         return;
     }
-    var destination = JQuery('<div>');
+    let destination = JQuery('<div>');
     destination.appendTo('body');
-    TUTORIAL_CLASS = ReactDom.render(<Tutorial/>, destination[0]);
-    callback();
+    TUTORIAL_CLASS = ReactDOM.render(<Tutorial/>, destination[0]);
+    callback(TUTORIAL_CLASS);
 }
 
 function register_tutorials() {
-    init_dom(function () {
-        TUTORIAL_CLASS.setOptions(OPTIONS);
-        TUTORIAL_CLASS.updateTutorials(TUTORIALS);
+    init_dom(function (tutorialClass: Tutorial) {
+        tutorialClass.setOptions(OPTIONS);
+        tutorialClass.updateTutorials(TUTORIALS);
     });
 }
 
 
 function registerTutorials(tutorials, options = {}) {
-    var newTutorials = Clone(TUTORIALS);
-    for (var tutorialKey in tutorials)
-        newTutorials[tutorialKey] = tutorials[tutorialKey];
+    let newTutorials = Clone(TUTORIALS);
+    for (let tutorialKey in tutorials)
+        if (tutorials.hasOwnProperty(tutorialKey))
+            newTutorials[tutorialKey] = tutorials[tutorialKey];
     TUTORIALS = newTutorials;
     OPTIONS = options;
     if (REGISTER_DELAY !== null)
@@ -42,13 +43,13 @@ function registerTutorials(tutorials, options = {}) {
     REGISTER_DELAY = window.setTimeout(register_tutorials, 500);
 }
 
-function registerFinaliseCallback(callback) {
-    init_dom(function () {
-        TUTORIAL_CLASS.addFinaliseCallback(callback);
+function registerFinaliseCallback(callback: (tutorial?: TutorialType) => void) {
+    init_dom(function (tutorialClass: Tutorial) {
+        tutorialClass.addFinaliseCallback(callback);
     });
 }
 
-function startTutorial(tutorialKey) {
+function startTutorial(tutorialKey: string) {
     if (TUTORIAL_CLASS === null) {
         console.error('Cannot start tutorial: Tutorials not yet initialised.');
         return;

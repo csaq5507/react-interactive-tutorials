@@ -1,20 +1,20 @@
 import JQuery from 'jquery'
 import Cookie from 'js-cookie'
+import {TutorialCondition} from "./types";
 
-function conditionsMet(conditions, mustMatchAll) {
-    var anyConditionMet = false;
-    var allConditionsMet = true;
-    for (var conditionIndex = 0; conditionIndex < conditions.length; conditionIndex++) {
-        var condition = conditions[conditionIndex];
-        var conditionMet = false;
+function conditionsMet(conditions: TutorialCondition[], mustMatchAll: boolean) {
+    let allConditionsMet = true;
+    for (let conditionIndex = 0; conditionIndex < conditions.length; conditionIndex++) {
+        const condition = conditions[conditionIndex];
+        let conditionMet = false;
+        let input: any;
         switch (condition.compare) {
             case 'url':
-                if (window.location.pathname.match(condition.url) !== null)
+                if (typeof window.location.pathname !== 'undefined' && window.location.pathname.match(condition.url) !== null)
                     conditionMet = true;
                 break;
-
             case 'inputVal':
-                var input = JQuery(condition.selector);
+                input = JQuery(condition.selector);
                 if (input) {
                     if (input.is('input[type="radio"]')) {
                         if (input.prop('checked') == condition.value)
@@ -28,7 +28,7 @@ function conditionsMet(conditions, mustMatchAll) {
                 break;
 
             case 'inputNotVal':
-                var input = JQuery(condition.selector);
+                input = JQuery(condition.selector);
                 if (input) {
                     if (input.is('input[type="radio"]')) {
                         if (input.prop('checked') != condition.value)
@@ -79,7 +79,6 @@ function conditionsMet(conditions, mustMatchAll) {
         }
 
         if (conditionMet) {
-            anyConditionMet = true;
             if (!mustMatchAll)
                 return true;
         } else {
@@ -91,7 +90,7 @@ function conditionsMet(conditions, mustMatchAll) {
     else {
         return allConditionsMet;
     }
-};
+}
 
 export {
     conditionsMet,

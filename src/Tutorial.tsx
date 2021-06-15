@@ -1,23 +1,21 @@
 import JQuery from 'jquery'
 import * as React from 'react'
-import ReactDom from 'react-dom'
 import ClassNames from 'classnames'
 import Clone from 'clone'
 import Cookie from 'js-cookie'
 
-import {conditionsMet} from '../conditions.js'
-import {TutorialType, TutorialOptions, TutorialStep} from "../types";
-import Timeout = NodeJS.Timeout;
-import {paragraphs} from "../utils/utils";
+import {conditionsMet} from "./conditions";
+import {TutorialType, TutorialOptions, TutorialStep} from "./types";
+import {paragraphs} from "./utils";
 
 function clear_step_checkpoints(tutorial) {
-    for (var stepIndex = 0; stepIndex < tutorial.steps.length; stepIndex++) {
-        var step = tutorial.steps[stepIndex];
+    for (let stepIndex = 0; stepIndex < tutorial.steps.length; stepIndex++) {
+        let step = tutorial.steps[stepIndex];
         Cookie.remove('tutorial_' + tutorial.key + '_' + step.key);
     }
     if (tutorial.checkpoints) {
-        for (var checkpointIndex = 0; checkpointIndex < tutorial.checkpoints.length; checkpointIndex++) {
-            var checkpoint = tutorial.checkpoints[checkpointIndex];
+        for (let checkpointIndex = 0; checkpointIndex < tutorial.checkpoints.length; checkpointIndex++) {
+            let checkpoint = tutorial.checkpoints[checkpointIndex];
             Cookie.remove('tutorial_' + tutorial.key + '_' + checkpoint.checkpoint);
         }
     }
@@ -48,7 +46,7 @@ type TutorialState = {
 }
 
 class Tutorial extends React.Component<any, TutorialState> {
-    private proceedAfter: number;
+    private proceedAfter: number | null;
 
     constructor(props) {
         super(props);
@@ -75,6 +73,7 @@ class Tutorial extends React.Component<any, TutorialState> {
                 baseZIndex: 1050,
             }
         };
+        this.proceedAfter = null;
     }
 
     setOptions(options) {
@@ -89,7 +88,7 @@ class Tutorial extends React.Component<any, TutorialState> {
         this.setState({options: options});
     }
 
-    addFinaliseCallback(callback: () => void) {
+    addFinaliseCallback(callback: (tutorial?: TutorialType) => void) {
         this.setState({
             finaliseCallbacks: this.state.finaliseCallbacks.concat(callback),
         });
@@ -117,22 +116,22 @@ class Tutorial extends React.Component<any, TutorialState> {
             }
         }
 
-        var newStep = null;
-        var oldStepIndex;
-        var newStepIndex;
+        let newStep: null | TutorialStep = null;
+        let oldStepIndex;
+        let newStepIndex;
         if (this.state.tutorial !== null) {
-            for (var stepIndex = this.state.tutorial.steps.length - 1; stepIndex >= 0; stepIndex--) {
-                var step = this.state.tutorial.steps[stepIndex];
+            for (let stepIndex = this.state.tutorial.steps.length - 1; stepIndex >= 0; stepIndex--) {
+                const step = this.state.tutorial.steps[stepIndex];
 
                 if (this.state.step !== null && step.key == this.state.step.key)
                     oldStepIndex = stepIndex;
 
-                var met = conditionsMet(step.activeWhen, true);
+                const met = conditionsMet(step.activeWhen, true);
                 if (newStep === null && met) {
                     newStep = step;
                     newStepIndex = stepIndex;
                     if (typeof step.additionalBeforeHandler !== 'undefined')
-                        step.additionalAfterHandler();
+                        step.additionalBeforeHandler();
                 }
             }
         }
@@ -142,7 +141,7 @@ class Tutorial extends React.Component<any, TutorialState> {
                 this.setState({
                     step: null,
                     complete: false,
-                }, function () {
+                }, () => {
                     if (typeof callback == 'function')
                         callback();
                     this.refreshOffPage();
@@ -154,7 +153,7 @@ class Tutorial extends React.Component<any, TutorialState> {
                     step: newStep,
                     complete: false,
                     popupActive: oldStepIndex === null || newStepIndex > oldStepIndex ? true : this.state.popupActive,
-                }, function () {
+                }, () => {
                     if (typeof callback == 'function')
                         callback();
                     this.refreshOffPage();
@@ -165,11 +164,11 @@ class Tutorial extends React.Component<any, TutorialState> {
 
     refreshOffPage() {
         if (this.state.step !== null) {
-            var highlight = JQuery(this.state.step.highlight);
+            const highlight = JQuery(this.state.step.highlight);
             if (highlight && typeof highlight[0] !== 'undefined') {
-                var rect = highlight[0].getBoundingClientRect();
+                const rect = highlight[0].getBoundingClientRect();
                 if (rect.bottom < 0) {
-                    if (this.state.tooHigh == true || this.state.tooLow == false) {
+                    if (this.state.tooHigh || !this.state.tooLow) {
                         this.setState({
                             tooHigh: false,
                             tooLow: true,
@@ -178,7 +177,7 @@ class Tutorial extends React.Component<any, TutorialState> {
                     return;
                 }
                 if (rect.top > window.outerHeight) {
-                    if (this.state.tooHigh == false || this.state.tooLow == true) {
+                    if (!this.state.tooHigh || this.state.tooLow) {
                         this.setState({
                             tooHigh: true,
                             tooLow: false,
@@ -188,7 +187,7 @@ class Tutorial extends React.Component<any, TutorialState> {
                 }
             }
         }
-        if (this.state.tooHigh != false || this.state.tooLow != false) {
+        if (this.state.tooHigh || this.state.tooLow) {
             this.setState({
                 tooHigh: false,
                 tooLow: false,
@@ -200,18 +199,18 @@ class Tutorial extends React.Component<any, TutorialState> {
         JQuery(document).on('shown.bs.dropdown', this.refreshStep.bind(this));
         JQuery(document).on('hidden.bs.dropdown', this.refreshStep.bind(this));
         // hide the tutorial when navigating to a link, already completed steps may show for the load time
-        JQuery(document).on('click', 'a[href]:not([href=""]):not([href="#"])', (event) => {
+        JQuery(document).on('click', 'a[href]:not([href=""]):not([href="#"])', (_: MouseEvent) => {
             this.close();
         });
-        var onInputChange = (event, ignoreBlank) => {
-            var newValue = JQuery(event.target).val();
+        let onInputChange = (event, ignoreBlank) => {
+            let newValue = JQuery(event.target).val();
             if (this.proceedAfter !== null) {
                 window.clearTimeout(this.proceedAfter);
                 this.proceedAfter = null;
             }
             if (newValue == '' && ignoreBlank)
                 return;
-            if (this.state.tutorial !== null && !this.state.step.editWhileOpen)
+            if (this.state.tutorial !== null && this.state.step !== null && !this.state.step.editWhileOpen)
                 this.acknowledge(null);
             this.proceedAfter = window.setTimeout(() => {
                 this.refreshStep();
@@ -221,7 +220,7 @@ class Tutorial extends React.Component<any, TutorialState> {
         JQuery(document).on('shown.bs.modal', () => {
             this.acknowledge(null);
         });
-        JQuery(document).on('single-page-tab-loaded', (event) => {
+        JQuery(document).on('single-page-tab-loaded', (_: Event) => {
             window.setTimeout(() => {
                 this.refreshStep();
             }, 500);
@@ -239,28 +238,29 @@ class Tutorial extends React.Component<any, TutorialState> {
             onInputChange(event, false);
         });
         JQuery(document).on('submit', 'form', (event) => {
-            if (!this.state.tutorial)
+            if (this.state.tutorial === null)
                 return;
-
-            var expect_form = function (form, method, url, callback) {
+            let key = this.state.tutorial.key;
+            let expect_form = function (form, method, url, callback) {
                 if (method && form.attr('method') != method)
                     return false;
-                if (url && form.attr('action').match(url) === null)
+                if (url && typeof form.attr('action') !== 'undefined' && form.attr('action').match(url) === null)
                     return false;
                 callback();
                 return true;
             };
             expect_form = expect_form.bind(this);
 
-            var form = JQuery(event.target);
+            let form = JQuery(event.target);
             if (this.state.tutorial.complete && this.state.tutorial.complete.on == 'form_submission') {
                 expect_form(
                     form,
                     this.state.tutorial.complete.form.method,
                     this.state.tutorial.complete.form.url,
                     () => {
+
                         Cookie.set(
-                            'tutorial_complete_' + this.state.tutorial.key,
+                            'tutorial_complete_' + key,
                             true,
                             {path: '/'}
                         );
@@ -269,8 +269,8 @@ class Tutorial extends React.Component<any, TutorialState> {
             }
             if (!this.state.tutorial.checkpoints)
                 return;
-            for (var checkpointIndex = 0; checkpointIndex < this.state.tutorial.checkpoints.length; checkpointIndex++) {
-                var checkpoint = this.state.tutorial.checkpoints[checkpointIndex];
+            for (let checkpointIndex = 0; checkpointIndex < this.state.tutorial.checkpoints.length; checkpointIndex++) {
+                let checkpoint = this.state.tutorial.checkpoints[checkpointIndex];
                 if (checkpoint.on != 'form_submission')
                     continue;
                 expect_form(
@@ -279,7 +279,7 @@ class Tutorial extends React.Component<any, TutorialState> {
                     checkpoint.form.url,
                     () => {
                         Cookie.set(
-                            'tutorial_' + this.state.tutorial.key + '_' + checkpoint.checkpoint,
+                            'tutorial_' + key + '_' + checkpoint.checkpoint,
                             true,
                             {path: '/'}
                         );
@@ -289,7 +289,7 @@ class Tutorial extends React.Component<any, TutorialState> {
         });
         window.setInterval(this.refreshOffPage.bind(this), 500);
         window.setTimeout(() => {
-            var tutorialKey = Cookie.get('tutorial_active');
+            let tutorialKey = Cookie.get('tutorial_active');
             if (tutorialKey) {
                 this.setState({
                     tutorial: Clone(this.state.tutorials[tutorialKey]),
@@ -304,7 +304,7 @@ class Tutorial extends React.Component<any, TutorialState> {
     componentDidUpdate(prevProps, prevState) {
         if (!prevState.popupActive && this.state.popupActive) {
             if (this.state.step !== null && this.state.step.highlight) {
-                var highlight = JQuery(this.state.step.highlight);
+                let highlight = JQuery(this.state.step.highlight);
                 if (!this.state.step.noFocus) {
                     if (highlight.is('input') || highlight.is('select'))
                         highlight.focus();
@@ -329,7 +329,7 @@ class Tutorial extends React.Component<any, TutorialState> {
     }
 
     start(tutorialName) {
-        var tutorial = this.state.tutorials[tutorialName];
+        let tutorial = this.state.tutorials[tutorialName];
         if (!tutorial) {
             console.error('Tutorial "' + tutorialName + '" not found.');
             return;
@@ -353,7 +353,7 @@ class Tutorial extends React.Component<any, TutorialState> {
         }
     }
 
-    dismissAnnouncement(event?: MouseEvent) {
+    dismissAnnouncement() {
         this.acknowledge(300);
     }
 
@@ -399,7 +399,7 @@ class Tutorial extends React.Component<any, TutorialState> {
         this.abort();
         for (let callbackIndex = 0; callbackIndex < this.state.finaliseCallbacks.length; callbackIndex++) {
             let callback = this.state.finaliseCallbacks[callbackIndex];
-            callback(this.state.tutorial);
+            callback(this.state.tutorial !== null ? this.state.tutorial : undefined);
         }
     }
 
@@ -423,11 +423,11 @@ class Tutorial extends React.Component<any, TutorialState> {
     }
 
     renderHighlightStyles() {
-        var styles = '';
+        let styles = '';
         if (this.state.popupActive) {
             if (this.state.step !== null) {
                 if (this.state.step.highlight) {
-                    var background = '';
+                    let background = '';
                     if (this.state.step.highlightBack) {
                         background = `background: ${this.state.step.highlightBack};\n`;
                     }
@@ -446,12 +446,12 @@ ${this.state.step.highlight} {
     }
 
     renderAnnotationStyles() {
-        var step = this.state.step;
-        var styles = '';
+        let step = this.state.step;
+        let styles = '';
         if (this.state.popupActive) {
             if (step !== null) {
                 if (step.annotate) {
-                    var margin, position, movement, selector, addSelector, centralize = '';
+                    let margin, position, movement, selector, addSelector, centralize = '';
                     if (step.annotateBottom) {
                         margin = 'margin-top: 1rem;\n';
                         position = 'position: absolute;\n';
@@ -500,7 +500,7 @@ ${this.state.step.highlight} {
                     }
 
                     if (selector) {
-                        var content = (paragraphs(step.annotate.p) || '');
+                        let content = (paragraphs(step.annotate.p) || '');
                         if (step.annotateSkip) {
                             if (step.editWhileOpen) {
                                 content += `\n\n` + (this.state.options.translations.annotateSkip || `When you are done, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`);
@@ -545,18 +545,17 @@ ${selector} {
     }
 
     render() {
-        var current;
+        let current;
         if (this.state.tutorial !== null) {
-            var steps = [];
-            var activeFound = false;
-            for (var stepIndex = 0; stepIndex < this.state.tutorial.steps.length; stepIndex++) {
-                var step = this.state.tutorial.steps[stepIndex];
-                var active = (this.state.step !== null && step.key == this.state.step.key);
+            let steps: JSX.Element[] = [];
+            let activeFound = false;
+            for (let stepIndex = 0; stepIndex < this.state.tutorial.steps.length; stepIndex++) {
+                let step = this.state.tutorial.steps[stepIndex];
+                let active = (this.state.step !== null && step.key == this.state.step.key);
 
                 if (active)
                     activeFound = true;
 
-                var icon;
                 if (active) {
                     steps.push(<li key={step.key} className="active">&#9679;</li>);
                 } else if (!activeFound) {
@@ -565,7 +564,7 @@ ${selector} {
                     steps.push(<li key={step.key} className="future">&#9675;</li>);
                 }
             }
-            var actions = [];
+            let actions: JSX.Element[] = [];
             actions.push(
                 <a
                     key="abort"
@@ -621,26 +620,26 @@ ${selector} {
             );
         }
 
-        var complete;
+        let complete;
         if (this.state.complete) {
             complete = (
                 <div className="complete">
-                    <h2>{this.state.tutorial.complete.title || 'Tutorial Complete'}</h2>
-                    <p>{this.state.tutorial.complete.message}</p>
+                    <h2>{this.state.tutorial?.complete.title || 'Tutorial Complete'}</h2>
+                    <p>{this.state.tutorial?.complete.message || ''}</p>
                     <a className="btn btn-primary float-xs-right"
                        onClick={this.finalise.bind(this)}>{this.state.options.translations.complete || 'Complete'}</a>
                 </div>
             );
         }
 
-        var skipper;
+        let skipper;
         if (this.state.step !== null && this.state.step.annotateSkip) {
             skipper = (
                 <div className="skipper">
                     <p>
                         <a className="btn btn-primary btn-block" href="#" onClick={(event) => {
                             event.preventDefault();
-                            if (typeof this.state.step.additionalAfterHandler !== 'undefined')
+                            if (this.state.step !== null && typeof this.state.step.additionalAfterHandler !== 'undefined')
                                 this.state.step.additionalAfterHandler();
                             this.dismissAnnouncement();
                         }}>
@@ -652,9 +651,9 @@ ${selector} {
             );
         }
 
-        var announcement;
+        let announcement;
         if (this.state.popupActive && this.state.step !== null && this.state.step.announce) {
-            var dismiss;
+            let dismiss;
             if (this.state.step.announceDismiss) {
                 dismiss = (
                     <a
@@ -671,13 +670,15 @@ ${selector} {
             announcement = (
                 <div className="announcement">
                     {this.reformatAnnouncement(paragraphs(this.state.step.announce.p).trim())}
-                    <div className="dismiss" onClick={this.dismissAnnouncement.bind(this)}>
+                    <div className="dismiss" onClick={(_:any)=>{
+                        this.dismissAnnouncement();
+                    }}>
                         {dismiss}
                     </div>
                 </div>
             );
         }
-        var blackoutSize = 0;
+        let blackoutSize = 0;
         if (this.state.blockingInput)
             blackoutSize = 100;
         return (
@@ -693,8 +694,7 @@ ${selector} {
                     style={{
                         width: blackoutSize + '%',
                         height: blackoutSize + '%',
-                    }}
-                >
+                    }}>
                     <div
                         className="too-low">↑{this.state.options.translations.tooLow || 'Scroll up to see the next section of the tutorial'}↑
                     </div>
@@ -707,8 +707,7 @@ ${selector} {
                     style={{
                         width: blackoutSize + '%',
                         height: blackoutSize + '%',
-                    }}
-                >
+                    }}>
                     {announcement}
                 </div>
                 {current}
@@ -719,4 +718,4 @@ ${selector} {
     }
 }
 
-export default Tutorial
+export default Tutorial;
