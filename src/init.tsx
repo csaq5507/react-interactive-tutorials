@@ -1,11 +1,11 @@
-import React from 'react'
-import ReactDom from 'react-dom'
-import JQuery from 'jquery'
-import Clone from 'clone'
+import * as React from "react";
+import ReactDom from 'react-dom';
+import JQuery from 'jquery';
+import Clone from 'clone';
 
-import Tutorial from './tutorial.jsx'
 
-import {paragraphs} from './utils.jsx'
+import {paragraphs, ovverideTransFunction} from "./utils";
+import Tutorial from "./Tutorial";
 
 var TUTORIAL_CLASS = null;
 var REGISTER_DELAY = null;
@@ -31,7 +31,7 @@ function register_tutorials() {
 }
 
 
-function registerTutorials(tutorials,options = {}) {
+function registerTutorials(tutorials, options = {}) {
     var newTutorials = Clone(TUTORIALS);
     for (var tutorialKey in tutorials)
         newTutorials[tutorialKey] = tutorials[tutorialKey];
@@ -58,7 +58,7 @@ function startTutorial(tutorialKey) {
 
 function abortTutorial() {
     if (TUTORIAL_CLASS === null) {
-        console.warning('Cannot abort tutorial: Tutorials not yet initialised.');
+        console.warn('Cannot abort tutorial: Tutorials not yet initialised.');
         return;
     }
     TUTORIAL_CLASS.abort();
@@ -70,4 +70,5 @@ export {
     startTutorial,
     abortTutorial,
     paragraphs,
+    ovverideTransFunction
 }

@@ -1,11 +1,14 @@
 import JQuery from 'jquery'
-import React from 'react'
+import * as React from 'react'
 import ReactDom from 'react-dom'
 import ClassNames from 'classnames'
 import Clone from 'clone'
 import Cookie from 'js-cookie'
 
-import {conditionsMet} from './conditions.jsx'
+import {conditionsMet} from '../conditions.js'
+import {TutorialType, TutorialOptions, TutorialStep} from "../types";
+import Timeout = NodeJS.Timeout;
+import {paragraphs} from "../utils/utils";
 
 function clear_step_checkpoints(tutorial) {
     for (var stepIndex = 0; stepIndex < tutorial.steps.length; stepIndex++) {
@@ -28,7 +31,25 @@ function set_step_checkpoint(tutorial, step) {
     );
 }
 
-class Tutorial extends React.Component {
+type TutorialState = {
+    tutorials: {},
+    finaliseCallbacks: ((tutorial?: TutorialType) => void)[],
+
+    popupActive: boolean,
+    blockingInput: boolean,
+
+    tutorial: null | TutorialType,
+    complete: boolean,
+    step: null | TutorialStep,
+
+    tooHigh: boolean,
+    tooLow: boolean,
+    options: TutorialOptions
+}
+
+class Tutorial extends React.Component<any, TutorialState> {
+    private proceedAfter: number;
+
     constructor(props) {
         super(props);
 
@@ -48,7 +69,7 @@ class Tutorial extends React.Component {
             tooHigh: true,
             tooLow: false,
             options: {
-                foreZIndex: false,
+                forceZIndex: false,
                 centralizeAnnouncements: false,
                 translations: {},
                 baseZIndex: 1050,
@@ -58,7 +79,7 @@ class Tutorial extends React.Component {
 
     setOptions(options) {
         if (!options.hasOwnProperty("forceZIndex"))
-            options.foreZIndex = false;
+            options.forceZIndex = false;
         if (!options.hasOwnProperty("translations"))
             options.translations = {};
         if (!options.hasOwnProperty("centralizeAnnouncements"))
@@ -68,21 +89,17 @@ class Tutorial extends React.Component {
         this.setState({options: options});
     }
 
-    addFinaliseCallback(callback) {
-        this.setState(state => {
-            state.finaliseCallbacks = state.finaliseCallbacks.concat(callback);
-            return state;
+    addFinaliseCallback(callback: () => void) {
+        this.setState({
+            finaliseCallbacks: this.state.finaliseCallbacks.concat(callback),
         });
     }
 
     updateTutorials(tutorials) {
-        this.setState(state => {
-            state.tutorials = tutorials;
-            return state;
-        }, this.refreshStep);
+        this.setState({tutorials: tutorials}, this.refreshStep);
     }
 
-    refreshStep(callback) {
+    refreshStep(callback?: () => void) {
         if (this.state.tutorial !== null) {
             if (this.state.tutorial.complete && this.state.tutorial.complete.on == 'checkpointReached') {
                 if (Cookie.get('tutorial_' + this.state.tutorial.key + '_' + this.state.tutorial.complete.checkpoint)) {
@@ -91,11 +108,10 @@ class Tutorial extends React.Component {
             }
 
             if (Cookie.get('tutorial_complete_' + this.state.tutorial.key)) {
-                this.setState(state => {
-                    state.step = null;
-                    state.complete = true;
-                    state.popupActive = true;
-                    return state;
+                this.setState({
+                    step: null,
+                    complete: true,
+                    popupActive: true,
                 });
                 return;
             }
@@ -115,7 +131,7 @@ class Tutorial extends React.Component {
                 if (newStep === null && met) {
                     newStep = step;
                     newStepIndex = stepIndex;
-                    if(typeof step.additionalBeforeHandler !== 'undefined')
+                    if (typeof step.additionalBeforeHandler !== 'undefined')
                         step.additionalAfterHandler();
                 }
             }
@@ -123,10 +139,9 @@ class Tutorial extends React.Component {
 
         if (newStep === null) {
             if (this.state.step !== null) {
-                this.setState(state => {
-                    state.step = null;
-                    state.complete = false;
-                    return state;
+                this.setState({
+                    step: null,
+                    complete: false,
                 }, function () {
                     if (typeof callback == 'function')
                         callback();
@@ -135,12 +150,10 @@ class Tutorial extends React.Component {
             }
         } else {
             if (this.state.step === null || newStep.key != this.state.step.key) {
-                this.setState(state => {
-                    state.step = newStep;
-                    state.complete = false;
-                    if (oldStepIndex === null || newStepIndex > oldStepIndex)
-                        state.popupActive = true;
-                    return state;
+                this.setState({
+                    step: newStep,
+                    complete: false,
+                    popupActive: oldStepIndex === null || newStepIndex > oldStepIndex ? true : this.state.popupActive,
                 }, function () {
                     if (typeof callback == 'function')
                         callback();
@@ -157,20 +170,18 @@ class Tutorial extends React.Component {
                 var rect = highlight[0].getBoundingClientRect();
                 if (rect.bottom < 0) {
                     if (this.state.tooHigh == true || this.state.tooLow == false) {
-                        this.setState(state => {
-                            state.tooHigh = false;
-                            state.tooLow = true;
-                            return state;
+                        this.setState({
+                            tooHigh: false,
+                            tooLow: true,
                         });
                     }
                     return;
                 }
                 if (rect.top > window.outerHeight) {
                     if (this.state.tooHigh == false || this.state.tooLow == true) {
-                        this.setState(state => {
-                            state.tooHigh = true;
-                            state.tooLow = false;
-                            return state;
+                        this.setState({
+                            tooHigh: true,
+                            tooLow: false,
                         });
                     }
                     return;
@@ -178,10 +189,9 @@ class Tutorial extends React.Component {
             }
         }
         if (this.state.tooHigh != false || this.state.tooLow != false) {
-            this.setState(state => {
-                state.tooHigh = false;
-                state.tooLow = false;
-                return state;
+            this.setState({
+                tooHigh: false,
+                tooLow: false,
             });
         }
     }
@@ -281,10 +291,9 @@ class Tutorial extends React.Component {
         window.setTimeout(() => {
             var tutorialKey = Cookie.get('tutorial_active');
             if (tutorialKey) {
-                this.setState(state => {
-                    state.tutorial = Clone(state.tutorials[tutorialKey]);
-                    state.step = null;
-                    return state;
+                this.setState({
+                    tutorial: Clone(this.state.tutorials[tutorialKey]),
+                    step: null,
                 }, () => {
                     this.refreshStep(this.open.bind(this));
                 });
@@ -304,17 +313,15 @@ class Tutorial extends React.Component {
                     }
                 }
             }
-            this.setState(state => {
-                state.blockingInput = true;
-                return state;
+            this.setState({
+                blockingInput: true,
             });
         }
         if (prevState.popupActive && !this.state.popupActive) {
             window.setTimeout(() => {
                 if (!this.state.popupActive) {
-                    this.setState(state => {
-                        state.blockingInput = false;
-                        return state;
+                    this.setState({
+                        blockingInput: false,
                     });
                 }
             }, 600);
@@ -329,11 +336,10 @@ class Tutorial extends React.Component {
         }
         Cookie.set('tutorial_active', tutorialName, {path: '/'});
         clear_step_checkpoints(tutorial);
-        this.setState(state => {
-            state.tutorial = Clone(tutorial);
-            state.step = null;
-            state.popupActive = true;
-            return state;
+        this.setState({
+            tutorial: Clone(tutorial),
+            step: null,
+            popupActive: true,
         }, () => {
             this.refreshStep();
         });
@@ -341,15 +347,34 @@ class Tutorial extends React.Component {
 
     open() {
         if (this.state.tutorial !== null) {
-            this.setState(state => {
-                state.popupActive = true;
-                return state;
+            this.setState({
+                popupActive: true,
             });
         }
     }
 
-    dismissAnnouncement(event) {
+    dismissAnnouncement(event?: MouseEvent) {
         this.acknowledge(300);
+    }
+
+    reformatAnnouncement(announcement) {
+        let parts = announcement.split(/\[lie?]/);
+        return parts.map((text, i) => {
+            if (i === 0 || i === (parts.length - 1))
+                return <span key={"p" + i}> {text}</span>;
+            else if (i === 1) {
+                return (
+                    <ul key={"p" + i}>
+                        <li>{text}</li>
+                        {parts.slice(1, parts.length - 2).map((text, j) => {
+                            return (<li key={"li" + j}>{text}</li>);
+                        })}
+                    </ul>
+                );
+            } else {
+                return null;
+            }
+        });
     }
 
     acknowledge(delay) {
@@ -366,17 +391,14 @@ class Tutorial extends React.Component {
 
     close() {
         if (this.state.popupActive && !this.state.complete) {
-            this.setState(state => {
-                state.popupActive = false;
-                return state;
-            });
+            this.setState({popupActive: false});
         }
     }
 
     finalise() {
         this.abort();
-        for (var callbackIndex = 0; callbackIndex < this.state.finaliseCallbacks.length; callbackIndex++) {
-            var callback = this.state.finaliseCallbacks[callbackIndex];
+        for (let callbackIndex = 0; callbackIndex < this.state.finaliseCallbacks.length; callbackIndex++) {
+            let callback = this.state.finaliseCallbacks[callbackIndex];
             callback(this.state.tutorial);
         }
     }
@@ -385,12 +407,11 @@ class Tutorial extends React.Component {
         Cookie.remove('tutorial_active');
         if (this.state.tutorial !== null) {
             Cookie.remove('tutorial_complete_' + this.state.tutorial.key);
-            this.setState(state => {
-                state.tutorial = null;
-                state.step = null;
-                state.complete = false;
-                state.popupActive = false;
-                return state;
+            this.setState({
+                tutorial: null,
+                step: null,
+                complete: false,
+                popupActive: false,
             });
         }
     }
@@ -414,7 +435,7 @@ class Tutorial extends React.Component {
                     styles += `
 ${this.state.step.highlight} {
   position: relative;
-  z-index: ${this.state.baseZIndex + 2} ;
+  z-index: ${this.state.options.baseZIndex + 2} ${this.state.options.forceZIndex ? "!important" : ""};
   ${background}
 }
           `;
@@ -430,25 +451,25 @@ ${this.state.step.highlight} {
         if (this.state.popupActive) {
             if (step !== null) {
                 if (step.annotate) {
-                    var margin, position, movement, selector, addSelector, centalize = '';
+                    var margin, position, movement, selector, addSelector, centralize = '';
                     if (step.annotateBottom) {
                         margin = 'margin-top: 1rem;\n';
                         position = 'position: absolute;\n';
                         movement = 'top: 100%;\n';
-                        if(this.state.options.centralizeAnnouncements)
-                            centalize = 'left:50%;\ntransform:translateX(-50%);\n';
+                        if (this.state.options.centralizeAnnouncements)
+                            centralize = 'left:50%;\ntransform:translateX(-50%);\n';
                         else
-                            centalize = 'left:0;';
+                            centralize = 'left:0;';
                         selector = step.annotateBottom;
                         addSelector = step.annotateBottom + ':after';
                     } else if (step.annotateTop) {
                         margin = 'margin-bottom: 1rem;\n';
                         position = 'position: absolute;\n';
                         movement = 'bottom: 100%;\n';
-                        if(this.state.options.centralizeAnnouncements)
-                            centalize = 'left:50%;\ntransform:translateX(-50%);\n';
+                        if (this.state.options.centralizeAnnouncements)
+                            centralize = 'left:50%;\ntransform:translateX(-50%);\n';
                         else
-                            centalize = 'left:0;';
+                            centralize = 'left:0;';
                         selector = step.annotateTop;
                         addSelector = step.annotateTop + ':before';
                     } else if (step.annotateIn) {
@@ -460,31 +481,31 @@ ${this.state.step.highlight} {
                         margin = 'margin-right: 1rem;\n';
                         position = 'position: absolute;\n';
                         movement = 'right: 100%;\n';
-                        if(this.state.options.centralizeAnnouncements)
-                            centalize = 'top:50%;\ntransform:translateY(-50%);\n';
+                        if (this.state.options.centralizeAnnouncements)
+                            centralize = 'top:50%;\ntransform:translateY(-50%);\n';
                         else
-                            centalize = 'top:0;';
+                            centralize = 'top:0;';
                         selector = step.annotateLeft;
                         addSelector = step.annotateLeft + ':after';
                     } else if (step.annotateRight) {
                         margin = 'margin-left: 1rem;\n';
                         position = 'position: absolute;\n';
                         movement = 'left: 100%;\n';
-                        if(this.state.options.centralizeAnnouncements)
-                            centalize = 'top:50%;\ntransform:translateY(-50%);\n';
+                        if (this.state.options.centralizeAnnouncements)
+                            centralize = 'top:50%;\ntransform:translateY(-50%);\n';
                         else
-                            centalize = 'top:0;';
+                            centralize = 'top:0;';
                         selector = step.annotateRight;
                         addSelector = step.annotateRight + ':after';
                     }
 
                     if (selector) {
-                        var content = (step.annotate || '');
+                        var content = (paragraphs(step.annotate.p) || '');
                         if (step.annotateSkip) {
                             if (step.editWhileOpen) {
-                                content += this.state.options.translations.annotateSkip || `\n\nWhen you are done, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`;
+                                content += `\n\n` + (this.state.options.translations.annotateSkip || `When you are done, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`);
                             } else {
-                                content += this.state.options.translations.annotateSkip || `\n\nTo continue, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`;
+                                content += `\n\n` + (this.state.options.translations.annotateSkip || `To continue, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`);
                             }
                         }
                         content = content.replace(/\n/g, '\\00000a').replace(/'/g, "\\'");
@@ -500,7 +521,7 @@ ${addSelector} {
   padding: 10px;
   min-width: 200px;
   max-width: 500px;
-  z-index: ${this.state.baseZIndex + 2} ${this.state.foreZIndex ? '!important' : ''};
+  z-index: ${this.state.options.baseZIndex + 2} ${this.state.options.forceZIndex ? '!important' : ''};
   color: #fff;
   white-space: pre-wrap;
   font-size: 15px;
@@ -550,7 +571,7 @@ ${selector} {
                     key="abort"
                     className="btn btn-primary btn-md float-xs-left"
                     onClick={this.exit.bind(this)}
-                    disabled={this.state.complete}
+                    //  disabled={this.state.complete} TODO
                 >
                     {this.state.options.translations.exit || 'Exit Tutorial'}
 
@@ -566,7 +587,7 @@ ${selector} {
                             event.preventDefault();
                             this.close();
                         }}
-                        disabled={!this.state.popupActive || this.state.complete}
+                        //  disabled={!this.state.popupActive || this.state.complete} TODO
                     >
                         {this.state.options.translations.hideHelp || 'Hide Help'}
                     </a>
@@ -581,7 +602,7 @@ ${selector} {
                             event.preventDefault();
                             this.open();
                         }}
-                        disabled={this.state.complete}
+                        //   disabled={this.state.complete} TODO
                     >
                         {this.state.options.translations.showHelp || 'Show Help'}
                     </a>
@@ -619,7 +640,7 @@ ${selector} {
                     <p>
                         <a className="btn btn-primary btn-block" href="#" onClick={(event) => {
                             event.preventDefault();
-                            if(typeof this.state.step.additionalAfterHandler !== 'undefined')
+                            if (typeof this.state.step.additionalAfterHandler !== 'undefined')
                                 this.state.step.additionalAfterHandler();
                             this.dismissAnnouncement();
                         }}>
@@ -649,7 +670,7 @@ ${selector} {
             }
             announcement = (
                 <div className="announcement">
-                    {this.state.step.announce.trim()}
+                    {this.reformatAnnouncement(paragraphs(this.state.step.announce.p).trim())}
                     <div className="dismiss" onClick={this.dismissAnnouncement.bind(this)}>
                         {dismiss}
                     </div>
