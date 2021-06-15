@@ -1,13 +1,15 @@
-# react-interactive-tutorials
+# react-interactive-tutorials-cont
 
 [![npm version](https://badge.fury.io/js/react-interactive-tutorials.svg)](http://badge.fury.io/js/react-interactive-tutorials)
 ![Downloads](http://img.shields.io/npm/dm/react-interactive-tutorials.svg?style=flat)
 
 Framework for creating unobtrusive interactive tutorials for use in web apps.
 
+This is a Fork from https://github.com/uptick/react-interactive-tutorials. It provides some extra [functionality](/#extra-functionality).
+
 ## Live Demo
 
-Have a play around with the live demo here: http://uptick.github.io/react-interactive-tutorials/
+Have a play around with the live demo of the original Repo here: http://uptick.github.io/react-interactive-tutorials/
 
 ## How it Works
 
@@ -39,20 +41,25 @@ And anyone using your site will need:
 Install the npm package:
 
 ```
-npm install react-interactive-tutorials
+npm install react-interactive-tutorials-cont
+```
+or 
+```
+npm install react-interactive-tutorials-cont
 ```
 
 Include the built css located at:
 
 ```
-node_modules/react-interactive-tutorials/dist/react-interactive-tutorials.css
+node_modules/react-interactive-tutorials-cont/dist/react-interactive-tutorials.css
 ```
 
 Register your own tutorials:
 
 ```javascript
 // es6
-import { registerTutorials } from 'react-interactive-tutorials'
+import { registerTutorials } from 'react-interactive-tutorials-cont'
+
 registerTutorials(YOUR_TUTORIALS);
 
 // attached to global let
@@ -63,3 +70,11 @@ interactiveTutorials.registerTutorials(YOUR_TUTORIALS);
 
 Full reference documentation coming soon. For now, take a look at the reference on the live demo at
 http://uptick.github.io/react-interactive-tutorials/.
+
+
+## Extra functionality
+
+* Translations
+* Options
+* Step-Callbacks
+* Type-safety

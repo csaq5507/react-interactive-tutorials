@@ -6,7 +6,7 @@ import Cookie from 'js-cookie'
 
 import {conditionsMet} from "./conditions";
 import {TutorialType, TutorialOptions, TutorialStep} from "./types";
-import {paragraphs} from "./utils";
+import {paragraphs, translate} from "./utils";
 
 function clear_step_checkpoints(tutorial) {
     for (let stepIndex = 0; stepIndex < tutorial.steps.length; stepIndex++) {
@@ -357,7 +357,7 @@ class Tutorial extends React.Component<any, TutorialState> {
         this.acknowledge(300);
     }
 
-    reformatAnnouncement(announcement) {
+    reformatAnnouncement(announcement: string) {
         let parts = announcement.split(/\[lie?]/);
         return parts.map((text, i) => {
             if (i === 0 || i === (parts.length - 1))
@@ -503,9 +503,9 @@ ${this.state.step.highlight} {
                         let content = (paragraphs(step.annotate.p) || '');
                         if (step.annotateSkip) {
                             if (step.editWhileOpen) {
-                                content += `\n\n` + (this.state.options.translations.annotateSkip || `When you are done, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`);
+                                content += `\n\n` + (this.state.options.translations.annotateSkip || `When you are done, press the '${translate(step.annotateSkip.trans)}' button in the bottom right corner of your screen.`);
                             } else {
-                                content += `\n\n` + (this.state.options.translations.annotateSkip || `To continue, press the '${step.annotateSkip}' button in the bottom right corner of your screen.`);
+                                content += `\n\n` + (this.state.options.translations.annotateSkip || `To continue, press the '${translate(step.annotateSkip.trans)}' button in the bottom right corner of your screen.`);
                             }
                         }
                         content = content.replace(/\n/g, '\\00000a').replace(/'/g, "\\'");
@@ -609,7 +609,7 @@ ${selector} {
             }
             current = (
                 <div className="status">
-                    <h4>{this.state.tutorial.title}</h4>
+                    <h4>{translate(this.state.tutorial.title.trans)}</h4>
                     <ul className="steps">
                         {steps}
                     </ul>
@@ -624,8 +624,8 @@ ${selector} {
         if (this.state.complete) {
             complete = (
                 <div className="complete">
-                    <h2>{this.state.tutorial?.complete.title || 'Tutorial Complete'}</h2>
-                    <p>{this.state.tutorial?.complete.message || ''}</p>
+                    <h2>{this.state.tutorial !== null ? translate(this.state.tutorial.complete.title.trans) : 'Tutorial Complete'}</h2>
+                    <p>{this.state.tutorial !== null ? this.reformatAnnouncement(this.state.tutorial.complete.message.p) : ''}</p>
                     <a className="btn btn-primary float-xs-right"
                        onClick={this.finalise.bind(this)}>{this.state.options.translations.complete || 'Complete'}</a>
                 </div>
@@ -643,7 +643,7 @@ ${selector} {
                                 this.state.step.additionalAfterHandler();
                             this.dismissAnnouncement();
                         }}>
-                            {this.state.step.annotateSkip}
+                            {translate(this.state.step.annotateSkip.trans)}
                         </a>
                     </p>
                     <p>({this.state.options.translations.nextStep || 'Go to next step'})</p>
@@ -663,14 +663,14 @@ ${selector} {
                             event.preventDefault();
                         }}
                     >
-                        {this.state.step.announceDismiss}
+                        {translate(this.state.step.announceDismiss.trans)}
                     </a>
                 );
             }
             announcement = (
                 <div className="announcement">
                     {this.reformatAnnouncement(paragraphs(this.state.step.announce.p).trim())}
-                    <div className="dismiss" onClick={(_:any)=>{
+                    <div className="dismiss" onClick={(_: any) => {
                         this.dismissAnnouncement();
                     }}>
                         {dismiss}

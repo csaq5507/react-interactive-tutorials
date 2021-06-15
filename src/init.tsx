@@ -5,7 +5,15 @@ import JQuery from 'jquery';
 import Clone from 'clone';
 import {paragraphs, ovverideTransFunction} from "./utils";
 import Tutorial from "./Tutorial";
-import {TutorialType} from "./types";
+import {
+    TutorialType,
+    TutorialStep,
+    TutorialOptions,
+    TutorialCheckpoint,
+    TutorialParagraph,
+    TutorialTranslation,
+    TutorialCondition
+} from "./types";
 
 let TUTORIAL_CLASS: Tutorial | null = null;
 let REGISTER_DELAY: null | number = null;
@@ -72,4 +80,14 @@ export {
     abortTutorial,
     paragraphs,
     ovverideTransFunction
-}
+};
+export type {
+    TutorialType,
+    TutorialStep,
+    TutorialOptions,
+    TutorialCheckpoint,
+    TutorialParagraph,
+    TutorialTranslation,
+    TutorialCondition
+};
+
