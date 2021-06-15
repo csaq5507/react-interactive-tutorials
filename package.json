@@ -1,8 +1,9 @@
 {
   "name": "react-interactive-tutorials-cont",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "description": "Framework for creating unobtrusive interactive tutorials for use in web apps. Original Project: https://github.com/uptick/react-interactive-tutorials.git",
   "main": "index.js",
+  "types": "index.d.ts",
   "scripts": {
     "publish-demo": "git branch -D gh-pages; git push origin --delete gh-pages; git checkout -b gh-pages; cd demo-site; yarn; npm run build; cd ..; git add .; git add -f demo-site/dist; git add -f demo-site/node_modules/uptick-demo-site/dist; git commit -m \"Demo site build\"; git push origin gh-pages; git checkout master; git push origin `git subtree split --prefix demo-site gh-pages`:gh-pages --force;",
     "test": "echo \"Error: no test specified\" && exit 1",
