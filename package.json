@@ -1,6 +1,6 @@
 {
   "name": "react-interactive-tutorials-cont",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "description": "Framework for creating unobtrusive interactive tutorials for use in web apps. Original Project: https://github.com/uptick/react-interactive-tutorials.git",
   "main": "index.js",
   "scripts": {
