@@ -3,24 +3,25 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import JQuery from 'jquery';
 import Clone from 'clone';
-import {paragraphs, ovverideTransFunction} from "./utils";
+import {paragraphs} from "./utils";
 import Tutorial from "./Tutorial";
 import {
-    TutorialType,
-    TutorialStep,
+    TranslationFunction,
     TutorialOptions,
-    TutorialCheckpoint,
-    TutorialParagraph,
-    TutorialTranslation,
-    TutorialCondition
+    TutorialType,
 } from "./types";
 
 let TUTORIAL_CLASS: Tutorial | null = null;
 let REGISTER_DELAY: null | number = null;
 let TUTORIALS = {};
-let OPTIONS = {};
+let OPTIONS: TutorialOptions = {
+    centralizeAnnouncements: false,
+    forceZIndex: false,
+    baseZIndex: 1050,
+    translations: {}
+};
 
-function init_dom(callback) {
+function  init_dom(callback) {
     if (TUTORIAL_CLASS !== null) {
         callback(TUTORIAL_CLASS);
         return;
@@ -31,63 +32,81 @@ function init_dom(callback) {
     callback(TUTORIAL_CLASS);
 }
 
-function register_tutorials() {
-    init_dom(function (tutorialClass: Tutorial) {
-        tutorialClass.setOptions(OPTIONS);
-        tutorialClass.updateTutorials(TUTORIALS);
-    });
-}
+class TutorialWrapper{
 
-
-function registerTutorials(tutorials, options = {}) {
-    let newTutorials = Clone(TUTORIALS);
-    for (let tutorialKey in tutorials)
-        if (tutorials.hasOwnProperty(tutorialKey))
-            newTutorials[tutorialKey] = tutorials[tutorialKey];
-    TUTORIALS = newTutorials;
-    OPTIONS = options;
-    if (REGISTER_DELAY !== null)
-        window.clearTimeout(REGISTER_DELAY);
-    REGISTER_DELAY = window.setTimeout(register_tutorials, 500);
-}
-
-function registerFinaliseCallback(callback: (tutorial?: TutorialType) => void) {
-    init_dom(function (tutorialClass: Tutorial) {
-        tutorialClass.addFinaliseCallback(callback);
-    });
-}
-
-function startTutorial(tutorialKey: string) {
-    if (TUTORIAL_CLASS === null) {
-        console.error('Cannot start tutorial: Tutorials not yet initialised.');
-        return;
+    constructor() {
+        this.LANG = "en";
     }
-    TUTORIAL_CLASS.start(tutorialKey);
-}
 
-function abortTutorial() {
-    if (TUTORIAL_CLASS === null) {
-        console.warn('Cannot abort tutorial: Tutorials not yet initialised.');
-        return;
+    TRANSLATION_FUNC(text: string, _: any)  {
+        console.log("why no override?");
+        return text;
     }
-    TUTORIAL_CLASS.abort();
-}
 
+    LANG = "en";
+
+    overrideTransFunction(transFunc){
+        this.TRANSLATION_FUNC = transFunc;
+    }
+    register_tutorials() {
+        init_dom((tutorialClass: Tutorial) => {
+            tutorialClass.setOptions(OPTIONS);
+            tutorialClass.setTransFunc(this.TRANSLATION_FUNC);
+            tutorialClass.setLang(this.LANG);
+            tutorialClass.updateTutorials(TUTORIALS);
+        });
+    }
+
+
+    registerTutorials(tutorials, options?: TutorialOptions, transFunc?: TranslationFunction, lang?: string) {
+        let newTutorials = Clone(TUTORIALS);
+        for (let tutorialKey in tutorials)
+            if (tutorials.hasOwnProperty(tutorialKey))
+                newTutorials[tutorialKey] = tutorials[tutorialKey];
+        TUTORIALS = newTutorials;
+        if (typeof options !== 'undefined')
+            OPTIONS = options;
+        if (typeof lang !== 'undefined')
+            this.LANG = lang;
+        if (typeof transFunc !== 'undefined')
+            this.TRANSLATION_FUNC = transFunc;
+        if (REGISTER_DELAY !== null)
+            window.clearTimeout(REGISTER_DELAY);
+        REGISTER_DELAY = window.setTimeout(this.register_tutorials, 500);
+    }
+
+    setLang(lang: string) {
+        if (TUTORIAL_CLASS === null) {
+            console.error('Cannot set tutorial Language: Tutorials not yet initialised.');
+            return;
+        }
+        TUTORIAL_CLASS.setLang(lang);
+    }
+
+    registerFinaliseCallback(callback: (tutorial?: TutorialType) => void) {
+        init_dom(function (tutorialClass: Tutorial) {
+            tutorialClass.addFinaliseCallback(callback);
+        });
+    }
+
+    startTutorial(tutorialKey) {
+        if (TUTORIAL_CLASS === null) {
+            console.error('Cannot start tutorial: Tutorials not yet initialised.');
+            return;
+        }
+        TUTORIAL_CLASS.start(tutorialKey);
+    }
+
+    abortTutorial() {
+        if (TUTORIAL_CLASS === null) {
+            console.warn('Cannot abort tutorial: Tutorials not yet initialised.');
+            return;
+        }
+        TUTORIAL_CLASS.abort();
+    }
+}
 export {
-    registerTutorials,
-    registerFinaliseCallback,
-    startTutorial,
-    abortTutorial,
     paragraphs,
-    ovverideTransFunction
-};
-export type {
-    TutorialType,
-    TutorialStep,
-    TutorialOptions,
-    TutorialCheckpoint,
-    TutorialParagraph,
-    TutorialTranslation,
-    TutorialCondition
+    TutorialWrapper
 };
 

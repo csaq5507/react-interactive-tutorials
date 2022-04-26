@@ -5,7 +5,7 @@
 
 Framework for creating unobtrusive interactive tutorials for use in web apps.
 
-This is a Fork from https://github.com/uptick/react-interactive-tutorials. It provides some extra [functionality](/#extra-functionality).
+This is a Fork from https://github.com/uptick/react-interactive-tutorials. It provides some extra [functionality](https://github.com/csaq5507/react-interactive-tutorials/#extra-functionality).
 
 ## Live Demo
 

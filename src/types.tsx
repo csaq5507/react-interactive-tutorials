@@ -75,11 +75,29 @@ export declare interface TutorialType {
         title: TutorialTranslation;
         message: TutorialParagraph;
     }
-    checkpoints: TutorialCheckpoint[],
+    checkpoints?: TutorialCheckpoint[],
 }
 
 
 export declare type TutorialOptions = {
+    forceZIndex?: boolean;
+    centralizeAnnouncements?: boolean;
+    translations?: {
+        annotateSkip?: string;
+        exit?: string;
+        hideHelp?: string;
+        showHelp?: string;
+        complete?: string;
+        tooLow?: string;
+        tooHigh?: string;
+        nextStep?: string;
+    };
+    baseZIndex?: number;
+}
+
+export declare type TranslationFunction = (text: string, lang: any) => string;
+
+export declare type TutorialOptionsSave = {
     forceZIndex: boolean;
     centralizeAnnouncements: boolean;
     translations: {

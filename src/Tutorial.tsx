@@ -5,8 +5,8 @@ import Clone from 'clone'
 import Cookie from 'js-cookie'
 
 import {conditionsMet} from "./conditions";
-import {TutorialType, TutorialOptions, TutorialStep} from "./types";
-import {paragraphs, translate} from "./utils";
+import {TutorialType, TutorialOptions, TutorialStep, TutorialOptionsSave, TranslationFunction} from "./types";
+import {paragraphs} from "./utils";
 
 function clear_step_checkpoints(tutorial) {
     for (let stepIndex = 0; stepIndex < tutorial.steps.length; stepIndex++) {
@@ -42,7 +42,9 @@ type TutorialState = {
 
     tooHigh: boolean,
     tooLow: boolean,
-    options: TutorialOptions
+    options: TutorialOptionsSave,
+    transFunc: TranslationFunction,
+    lang: string
 }
 
 class Tutorial extends React.Component<any, TutorialState> {
@@ -71,21 +73,35 @@ class Tutorial extends React.Component<any, TutorialState> {
                 centralizeAnnouncements: false,
                 translations: {},
                 baseZIndex: 1050,
-            }
+            },
+            transFunc: (text: string, _: any) => {
+                console.log("why no override?");
+                return text;
+            },
+            lang: 'en',
         };
         this.proceedAfter = null;
     }
 
-    setOptions(options) {
-        if (!options.hasOwnProperty("forceZIndex"))
-            options.forceZIndex = false;
-        if (!options.hasOwnProperty("translations"))
-            options.translations = {};
-        if (!options.hasOwnProperty("centralizeAnnouncements"))
-            options.centralizeAnnouncements = false;
-        if (!options.hasOwnProperty("baseZIndex"))
-            options.baseZIndex = 1050;
-        this.setState({options: options});
+    setOptions(options: TutorialOptions) {
+        this.setState({
+            options: {
+                forceZIndex: options.forceZIndex || false,
+                translations: options.translations || {},
+                centralizeAnnouncements: options.centralizeAnnouncements || false,
+                baseZIndex: options.baseZIndex || 1050
+            }
+        });
+    }
+
+    setTransFunc(transFunc: TranslationFunction) {
+        this.setState({
+            transFunc: transFunc,
+        });
+    }
+
+    setLang(lang: string) {
+        this.setState({lang: lang});
     }
 
     addFinaliseCallback(callback: (tutorial?: TutorialType) => void) {
@@ -358,6 +374,7 @@ class Tutorial extends React.Component<any, TutorialState> {
     }
 
     reformatAnnouncement(announcement: string) {
+        announcement = this.state.transFunc(announcement, this.state.lang);
         let parts = announcement.split(/\[lie?]/);
         return parts.map((text, i) => {
             if (i === 0 || i === (parts.length - 1))
@@ -500,12 +517,12 @@ ${this.state.step.highlight} {
                     }
 
                     if (selector) {
-                        let content = (paragraphs(step.annotate.p) || '');
+                        let content = (paragraphs(this.state.transFunc(step.annotate.p, this.state.lang)) || '');
                         if (step.annotateSkip) {
                             if (step.editWhileOpen) {
-                                content += `\n\n` + (this.state.options.translations.annotateSkip || `When you are done, press the '${translate(step.annotateSkip.trans)}' button in the bottom right corner of your screen.`);
+                                content += `\n\n` + (this.state.options.translations.annotateSkip || `When you are done, press the '${this.state.transFunc(step.annotateSkip.trans, this.state.lang)}' button in the bottom right corner of your screen.`);
                             } else {
-                                content += `\n\n` + (this.state.options.translations.annotateSkip || `To continue, press the '${translate(step.annotateSkip.trans)}' button in the bottom right corner of your screen.`);
+                                content += `\n\n` + (this.state.options.translations.annotateSkip || `To continue, press the '${this.state.transFunc(step.annotateSkip.trans, this.state.lang)}' button in the bottom right corner of your screen.`);
                             }
                         }
                         content = content.replace(/\n/g, '\\00000a').replace(/'/g, "\\'");
@@ -568,9 +585,8 @@ ${selector} {
             actions.push(
                 <a
                     key="abort"
-                    className="btn btn-primary btn-md float-xs-left"
+                    className={"btn btn-primary btn-md float-xs-left" + (this.state.complete ? " btn-disabled" : "")}
                     onClick={this.exit.bind(this)}
-                    //  disabled={this.state.complete} TODO
                 >
                     {this.state.options.translations.exit || 'Exit Tutorial'}
 
@@ -581,12 +597,12 @@ ${selector} {
                     <a
                         key="hide"
                         href="#"
-                        className="btn btn-secondary btn-md float-xs-right"
+                        className={"btn btn-secondary btn-md float-xs-right" + (!this.state.popupActive || this.state.complete ? " btn-disabled" : "")}
                         onClick={(event) => {
                             event.preventDefault();
                             this.close();
                         }}
-                        //  disabled={!this.state.popupActive || this.state.complete} TODO
+
                     >
                         {this.state.options.translations.hideHelp || 'Hide Help'}
                     </a>
@@ -596,12 +612,11 @@ ${selector} {
                     <a
                         key="open"
                         href="#"
-                        className="btn btn-secondary btn-md float-xs-right"
+                        className={"btn btn-secondary btn-md float-xs-right" + (this.state.complete ? " btn-disabled" : "")}
                         onClick={(event) => {
                             event.preventDefault();
                             this.open();
                         }}
-                        //   disabled={this.state.complete} TODO
                     >
                         {this.state.options.translations.showHelp || 'Show Help'}
                     </a>
@@ -609,7 +624,7 @@ ${selector} {
             }
             current = (
                 <div className="status">
-                    <h4>{translate(this.state.tutorial.title.trans)}</h4>
+                    <h4>{this.state.transFunc(this.state.tutorial.title.trans, this.state.lang)}</h4>
                     <ul className="steps">
                         {steps}
                     </ul>
@@ -624,7 +639,7 @@ ${selector} {
         if (this.state.complete) {
             complete = (
                 <div className="complete">
-                    <h2>{this.state.tutorial !== null ? translate(this.state.tutorial.complete.title.trans) : 'Tutorial Complete'}</h2>
+                    <h2>{this.state.tutorial !== null ? this.state.transFunc(this.state.tutorial.complete.title.trans, this.state.lang) : 'Tutorial Complete'}</h2>
                     <p>{this.state.tutorial !== null ? this.reformatAnnouncement(this.state.tutorial.complete.message.p) : ''}</p>
                     <a className="btn btn-primary float-xs-right"
                        onClick={this.finalise.bind(this)}>{this.state.options.translations.complete || 'Complete'}</a>
@@ -643,7 +658,7 @@ ${selector} {
                                 this.state.step.additionalAfterHandler();
                             this.dismissAnnouncement();
                         }}>
-                            {translate(this.state.step.annotateSkip.trans)}
+                            {this.state.transFunc(this.state.step.annotateSkip.trans, this.state.lang)}
                         </a>
                     </p>
                     <p>({this.state.options.translations.nextStep || 'Go to next step'})</p>
@@ -663,7 +678,7 @@ ${selector} {
                             event.preventDefault();
                         }}
                     >
-                        {translate(this.state.step.announceDismiss.trans)}
+                        {this.state.transFunc(this.state.step.announceDismiss.trans, this.state.lang)}
                     </a>
                 );
             }

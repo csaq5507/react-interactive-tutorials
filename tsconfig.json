@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "build/dist",
+    "outDir": "dist",
     "module": "esnext",
     "target": "es5",
     "lib": [
@@ -27,7 +27,8 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "declaration": true
   },
   "exclude": [
     "node_modules",
@@ -35,9 +36,7 @@
     "scripts",
     "acceptance-tests",
     "webpack",
-    "jest",
+    "jest"
   ],
-  "include": [
-    "src"
-  ]
+  "include": ["./src/**/*"]
 }

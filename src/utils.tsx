@@ -10,15 +10,5 @@ function paragraphs(strings: string) {
     }).join(' ').replace(/\n[\ ]+/g, '\n').trim();
 }
 
-let translate = (text: string) => {
-    return text;
-}
 
-let ovverideTransFunction = (transFunc: (text: string, language: any) => string, language: any) => {
-
-    translate = (text: string) => {
-        return transFunc(text, language);
-    };
-}
-
-export {paragraphs, translate, ovverideTransFunction}
+export {paragraphs}
